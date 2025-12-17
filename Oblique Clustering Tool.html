@@ -1,0 +1,2797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oblique Clustering Tool</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            color: #333333;
+        }
+
+        .header {
+            background: #f5f5f5;
+            padding: 15px 20px;
+            border-bottom: 2px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            background: #4a4a4a;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .file-label:hover {
+            background: #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="number"], select {
+            background: #fff;
+            border: 1px solid #ccc;
+            color: #333;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 80px;
+        }
+
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: #4a4a4a;
+        }
+
+        button {
+            background: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        button.btn-danger {
+            background: #4a4a4a;
+        }
+
+        button.btn-danger:hover:not(:disabled) {
+            background: #333;
+            box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #map {
+            flex: 1;
+            background: #e8e8e8;
+        }
+        .sidebarmain {
+            width: 350px;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar {
+            width: 350px;
+            background: #f9f9f9;
+            border-left: 2px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            overflow: scroll;
+        }
+
+        .sidebar-section {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .sidebar-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a4a4a;
+            margin-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-item {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-top: 4px;
+        }
+
+        #imagePreview {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            padding: 15px;
+            min-height: 250px;
+            overflow: auto;
+        }
+
+        #imagePreview img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .no-image {
+            color: #999;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .status {
+            padding: 8px 15px;
+            background: #f5f5f5;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #ddd;
+        }
+
+        .legend {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .image-info {
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-top: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .image-info div {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .image-info div:last-child {
+            border-bottom: none;
+        }
+
+        .image-info label {
+            color: #777;
+        }
+
+        .image-info span {
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* Custom Leaflet marker styles */
+        .custom-marker {
+            width: 24px;
+            height: 24px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .custom-marker:hover {
+            transform: rotate(-45deg) scale(1.2);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            z-index: 1000 !important;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            padding: 30px 50px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            z-index: 10000;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #e0e0e0;
+            border-top: 3px solid #4a4a4a;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Sidebar input styling */
+        .sidebar input[type="number"],
+        .sidebar select {
+            background: #fff;
+            border: 1px solid #ccc;
+            color: #333;
+        }
+
+        /* Control group separators */
+        .control-separator {
+            width: 1px;
+            height: 28px;
+            background: #ccc;
+            margin: 0 8px;
+            flex-shrink: 0;
+        }
+
+        .control-group-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><svg width="32" height="32" viewBox="0 0 256 256" style="vertical-align: middle; margin-right: 8px;">
+            <rect width="256" height="256" rx="28" fill="#ffffff" />
+            <g transform="rotate(-10 128 128)">
+                <!-- scaled from your 64x64 SVG by 4x -->
+                <path
+                d="M42.24 97.12l149.68-26.4 46.68 103.48-200.92 35.44 4.52-112.48Z"
+                fill="none"
+                stroke="#4A7DBA"
+                stroke-width="20"
+                stroke-linejoin="round"
+                />
+                <circle cx="103" cy="25.44" r="16" fill="#4A7DBA" />
+                <circle cx="127" cy="135.08" r="33.8" fill="#2B2B2B" />
+                <rect x="127" y="101.28" width="33.44" height="33.8" fill="#FBFBFB" />
+                <rect x="93.24" y="135.08" width="33.8" height="33.8" fill="#FBFBFB" />
+                <circle
+                cx="127"
+                cy="135.08"
+                r="33.44"
+                fill="none"
+                stroke="#000"
+                stroke-miterlimit="10"
+                stroke-width="4" 
+                />
+            </g>
+        </svg>Oblique Clustering Tool</h1>
+        <div class="controls">
+            <!-- Group 1: File Selection -->
+            <div class="control-group">
+                <label for="fileInput" class="file-label">
+                    📁 Select Images
+                </label>
+                <input type="file" id="fileInput" multiple accept="image/*">
+            </div>
+            
+            <div class="control-separator"></div>
+            
+            <!-- Group 2: Camera Configuration -->
+            <div class="control-group">
+                <label for="cameraModel">Camera:</label>
+                <select id="cameraModel">
+                    <option value="mavic3e">DJI Mavic 3E</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="sensorWidth">Sensor W:</label>
+                <input type="number" id="sensorWidth" value="17.3" step="0.1" disabled style="width: 60px;">
+            </div>
+            
+            <div class="control-group">
+                <label for="sensorHeight">Sensor H:</label>
+                <input type="number" id="sensorHeight" value="13.0" step="0.1" disabled style="width: 60px;">
+            </div>
+            
+            <div class="control-group">
+                <label for="focalLength">Focal:</label>
+                <input type="number" id="focalLength" value="24" step="0.1" disabled style="width: 55px;">
+            </div>
+            
+            <div class="control-group">
+                <label for="fovAssumption">FOV°:</label>
+                <input type="number" id="fovAssumption" value="84" min="40" max="120" style="width: 55px;">
+            </div>
+            
+            <div class="control-separator"></div>
+            
+            <!-- Group 3: Clustering Configuration -->
+            <div class="control-group">
+                <label for="algorithm">Algorithm:</label>
+                <select id="algorithm">
+                    <option value="dbscan">DBSCAN (density-based)</option>
+                    <option value="kmeans">K-means</option>
+                </select>
+            </div>
+            
+            <div class="control-group" id="epsControl">
+                <label for="eps">EPS:</label>
+                <input type="number" id="eps" value="100" min="10" max="1000" step="10" style="width: 60px;">
+            </div>
+            
+            <div class="control-group" id="minSamplesControl">
+                <label for="minSamples">MinPts:</label>
+                <input type="number" id="minSamples" value="3" min="1" max="20" style="width: 50px;">
+            </div>
+            
+            <div class="control-group">
+                <label for="clusterSize">Size:</label>
+                <input type="number" id="clusterSize" value="800" min="50" max="2000" step="50" style="width: 65px;">
+            </div>
+            
+            <div class="control-group">
+                <label for="obliqueOffset">Oblique:</label>
+                <input type="number" id="obliqueOffset" value="0" min="0" max="10" step="0.5" style="width: 50px;" title="Shifts oblique image centers forward (0=geometric center, 10=near edge)">
+            </div>
+            
+            <div class="control-group" id="rebalanceControl">
+                <label style="cursor: pointer;">
+                    <input type="checkbox" id="rebalance" checked>
+                    Rebalance
+                </label>
+            </div>
+            
+            <button id="clusterBtn" disabled>🔄 Cluster</button>
+            <button id="rebalanceBtn" disabled>⚖️ Rebalance</button>
+            
+            <div class="control-separator"></div>
+            
+            <!-- Group 4: Overlap -->
+            <div class="control-group">
+                <label for="overlap">Overlap:</label>
+                <input type="number" id="overlap" value="0" min="0" max="200" step="10" style="width: 55px;" title="Boundary overlap in meters. Images within this distance of adjacent cluster boundaries will be included in both clusters.">
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="map"></div>
+        
+        <div class="sidebarmain">
+
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">Total Images</div>
+                            <div class="stat-value" id="totalImages">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Clusters</div>
+                            <div class="stat-value" id="numClusters">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Avg Size</div>
+                            <div class="stat-value" id="avgSize">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Min/Max</div>
+                            <div class="stat-value" id="sizeRange" style="font-size: 14px;">0/0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Overlap Images</div>
+                            <div class="stat-value" id="overlapCount" style="font-size: 14px;">0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sidebar-section" id="clusterVisibilitySection" style="display: none;">
+                    <h3>Visualization</h3>
+                    <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                        <label for="mapLayer" style="white-space: nowrap;">Map Layer:</label>
+                        <select id="mapLayer" style="width: 120px; padding: 4px 6px; border-radius: 4px;">
+                            <option value="none">None</option>
+                            <option value="osm" selected>OpenStreetMap</option>
+                            <option value="satellite">Satellite</option>
+                            <option value="esri-satellite">ESRI Satellite</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                        <label for="hullConcavity" style="white-space: nowrap;">Hull Alpha (m):</label>
+                        <input type="number" id="hullConcavity" value="20" min="20" max="500" step="10" 
+                            style="width: 70px; padding: 4px 6px; border-radius: 4px;"
+                            title="Alpha radius in meters. Smaller = tighter/more concave (20-50), Larger = smoother (200+)">
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; cursor: pointer;">
+                            <input type="checkbox" id="showMarkersCheckbox" checked style="margin-right: 5px;">
+                            Show numbered markers
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <button id="selectAllClusters" style="padding: 5px 10px; margin-right: 5px;">Select All</button>
+                        <button id="deselectAllClusters" style="padding: 5px 10px;">Deselect All</button>
+                    </div>
+                    <div id="clusterCheckboxes" style="max-height: 200px; overflow-y: auto;">
+                        <!-- Checkboxes will be added here dynamically -->
+                    </div>
+                </div>
+                
+                
+                <div class="sidebar-section" style="flex: 0 0 auto;">
+                    <h3>Selected Image</h3>
+                    <div class="image-info" id="imageInfo">
+                        <div class="no-image">Hover over a marker to see ground footprint<br>Click to view image</div>
+                    </div>
+                </div>
+                
+                <div id="imagePreview">
+                    <div class="no-image">No image selected</div>
+                </div>
+            </div>
+            <!-- Export button at bottom of sidebar -->
+            <div class="sidebar-section" style="flex: 0 0 auto; margin-top: auto; padding: 15px;">
+                <button id="exportBtn" class="btn-danger" disabled style="width: 100%; padding: 12px 20px; font-size: 14px;">💾 Export image_groups.txt</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status" id="status">Ready. Select images to begin.</div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div id="loadingText" style="text-align: center; color: #333; margin-top: 10px;">Processing images...</div>
+        <div id="loadingProgress" style="text-align: center; color: #4a4a4a; font-size: 18px; font-weight: 600; margin-top: 5px;"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+    <!-- Delaunator: try local first, fall back to CDN -->
+    <script>
+        // For offline use: npm install delaunator, then copy node_modules/delaunator/delaunator.min.js to same folder
+        // Or download from: https://unpkg.com/delaunator@4.0.1/delaunator.min.js
+    </script>
+    <script src="delaunator.min.js" onerror="
+        var s = document.createElement('script');
+        s.src = 'https://unpkg.com/delaunator@4.0.1/delaunator.min.js';
+        document.head.appendChild(s);
+        console.log('Loading Delaunator from CDN (local not found)');
+    "></script>
+    <script>
+       
+
+        // Initialize map with visible world view
+        const map = L.map('map').setView([39.8283, -98.5795], 4); // Centered on USA, zoom 4
+        
+        // Create custom pane for hover footprints (above everything)
+        map.createPane('hoverPane');
+        map.getPane('hoverPane').style.zIndex = 650; // Higher than markers (400) and tooltips (600)
+        map.getPane('hoverPane').style.pointerEvents = 'none'; // Don't intercept mouse events
+        
+        // Define tile layers
+        const tileLayers = {
+            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 22
+            }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri, Maxar, Earthstar Geographics',
+                maxZoom: 19
+            }),
+            esriSatellite: L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 18
+            })
+        };
+        
+        // Add default layer
+        let currentLayer = tileLayers.osm.addTo(map);
+        
+        // Map layer switcher
+        document.getElementById('mapLayer').addEventListener('change', (e) => {
+            const layerName = e.target.value;
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+                currentLayer = null;
+            }
+            
+            switch(layerName) {
+                case 'none':
+                    // No tile layer - just show blank background
+                    currentLayer = null;
+                    break;
+                case 'satellite':
+                    currentLayer = tileLayers.satellite.addTo(map);
+                    break;
+                case 'esri-satellite':
+                    currentLayer = tileLayers.esriSatellite.addTo(map);
+                    break;
+                default:
+                    currentLayer = tileLayers.osm.addTo(map);
+            }
+        });
+
+        // State
+        let images = [];
+        let markers = [];
+        let footprintPolygons = [];
+        let clusters = [];
+        let currentFootprint = null;
+        let currentFootprintDot = null;
+        let clusterFootprintLayers = {};  // Store cluster footprint polygons
+        let clusterAlphaShapeLayers = {};    // Store alpha shape boundary polygons
+        let clusterCenterDots = {};       // Store cluster center dots
+        let visibleClusters = new Set();  // Track which clusters are visible
+        let markersByCluster = {};  // Store markers grouped by cluster
+        let clusterBoundaries = [];  // Store cluster boundary polygons for overlap calculation
+
+        // Camera specifications dictionary
+        const cameraSpecs = {
+            mavic3e: {
+                name: "DJI Mavic 3E",
+                sensorWidth: 17.3,  // mm (4/3" sensor)
+                sensorHeight: 13.0, // mm
+                focalLength: 24,    // mm equivalent
+                diagonalFOV: 84     // degrees
+            },
+            custom: {
+                name: "Custom",
+                sensorWidth: 17.3,
+                sensorHeight: 13.0,
+                focalLength: 24,
+                diagonalFOV: 84
+            }
+        };
+
+        // Camera model selector handler
+        document.getElementById('cameraModel').addEventListener('change', (e) => {
+            const model = e.target.value;
+            const specs = cameraSpecs[model];
+            
+            document.getElementById('sensorWidth').value = specs.sensorWidth;
+            document.getElementById('sensorHeight').value = specs.sensorHeight;
+            document.getElementById('focalLength').value = specs.focalLength;
+            document.getElementById('fovAssumption').value = specs.diagonalFOV;
+            
+            // Disable fields for preset models, enable for custom
+            const isCustom = model === 'custom';
+            document.getElementById('sensorWidth').disabled = !isCustom;
+            document.getElementById('sensorHeight').disabled = !isCustom;
+            document.getElementById('focalLength').disabled = !isCustom;
+        });
+
+        // Initialize with Mavic 3E specs
+        document.getElementById('cameraModel').dispatchEvent(new Event('change'));
+
+        // Cluster colors
+        const clusterColors = [
+            '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+            '#1abc9c', '#e67e22', '#34495e', '#16a085', '#27ae60',
+            '#2980b9', '#8e44ad', '#c0392b', '#d35400', '#7f8c8d'
+        ];
+
+        // File input handler - optimized for parallel processing
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('loadingText').textContent = 'Processing images...';
+            document.getElementById('status').textContent = `Processing ${files.length} images...`;
+
+            images = [];
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            footprintPolygons.forEach(p => map.removeLayer(p));
+            footprintPolygons = [];
+
+            // Process images in larger parallel batches for faster loading
+            const batchSize = 50;  // Increased from 10
+            let processed = 0;
+            
+            for (let i = 0; i < files.length; i += batchSize) {
+                const batch = files.slice(i, i + batchSize);
+                const batchResults = await Promise.all(
+                    batch.map(file => extractImageData(file).catch(err => {
+                        console.error(`Error processing ${file.name}:`, err);
+                        return null;
+                    }))
+                );
+                
+                // Add successful results to images array
+                batchResults.forEach(result => {
+                    if (result) images.push(result);
+                });
+                
+                processed += batch.length;
+                document.getElementById('loadingProgress').textContent = `${processed} / ${files.length}`;
+            }
+
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('loadingProgress').textContent = '';
+            
+            if (images.length > 0) {
+                document.getElementById('status').textContent = `Rendering ${images.length} markers...`;
+                
+                // Defer map rendering to allow UI to update
+                setTimeout(() => {
+                    displayImagesOnMap();
+                    updateStats();
+                    document.getElementById('clusterBtn').disabled = false;
+                    document.getElementById('status').textContent = `Ready. ${images.length} images loaded.`;
+                }, 10);
+            } else {
+                document.getElementById('status').textContent = 'No images with GPS data found';
+            }
+        });
+
+        // Algorithm selector - show/hide relevant parameters
+        document.getElementById('algorithm').addEventListener('change', (e) => {
+            const isDBSCAN = e.target.value === 'dbscan';
+            document.getElementById('epsControl').style.display = isDBSCAN ? 'block' : 'none';
+            document.getElementById('minSamplesControl').style.display = isDBSCAN ? 'block' : 'none';
+            document.getElementById('rebalanceControl').style.display = isDBSCAN ? 'block' : 'none';
+        });
+        
+        // Initialize algorithm visibility on load
+        document.getElementById('algorithm').dispatchEvent(new Event('change'));
+
+        async function extractImageData(file) {
+            return new Promise(async (resolve) => {
+                try {
+                    // Read first 256KB for metadata (EXIF + XMP) - increased for reliability
+                    const headerSlice = file.slice(0, 262144);
+                    const arrayBuffer = await headerSlice.arrayBuffer();
+                    const xmpData = extractXMPFromFile(arrayBuffer);
+                    
+                    // Now process with EXIF.js for GPS
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.onload = function() {
+                            EXIF.getData(img, function() {
+                                const lat = EXIF.getTag(this, 'GPSLatitude');
+                                const lon = EXIF.getTag(this, 'GPSLongitude');
+                                const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
+                                const lonRef = EXIF.getTag(this, 'GPSLongitudeRef');
+                                const alt = EXIF.getTag(this, 'GPSAltitude');
+
+                                if (!lat || !lon) {
+                                    console.warn(`No GPS data in ${file.name}`);
+                                    resolve(null);
+                                    return;
+                                }
+
+                                const latitude = convertDMSToDD(lat, latRef);
+                                const longitude = convertDMSToDD(lon, lonRef);
+                                
+                                // Parse XMP for DJI-specific data
+                                let altitude = alt || 50;
+                                let gimbalPitch = -90;  // Default nadir
+                                let gimbalRoll = 0;
+                                let gimbalYaw = 0;
+                                let flightPitch = 0;
+                                let flightRoll = 0;
+                                let flightYaw = 0;
+
+                                if (xmpData) {
+                                    // DJI uses exact CamelCase field names without spaces
+                                    // Use RelativeAltitude (AGL) instead of GPS altitude
+                                    const relativeAlt = parseXMPFloat(xmpData, 'RelativeAltitude', null);
+                                    if (relativeAlt !== null) {
+                                        altitude = relativeAlt;
+                                    }
+                                    
+                                    gimbalPitch = parseXMPFloat(xmpData, 'GimbalPitchDegree', -90);
+                                    gimbalRoll = parseXMPFloat(xmpData, 'GimbalRollDegree', 0);
+                                    gimbalYaw = parseXMPFloat(xmpData, 'GimbalYawDegree', 0);
+                                    flightPitch = parseXMPFloat(xmpData, 'FlightPitchDegree', 0);
+                                    flightRoll = parseXMPFloat(xmpData, 'FlightRollDegree', 0);
+                                    flightYaw = parseXMPFloat(xmpData, 'FlightYawDegree', 0);
+                                }
+
+                                // Determine camera heading based on gimbal orientation
+                                // When gimbal roll is ~180°, camera is facing backward
+                                let heading = flightYaw;
+                                
+                                if (Math.abs(gimbalRoll) > 90) {
+                                    // Camera is flipped backward - reverse the heading by 180°
+                                    heading = (flightYaw + 180) % 360;
+                                    // console.log('Camera facing backward - reversing heading');
+                                }
+
+                                resolve({
+                                    filename: file.name,
+                                    file: file,  // Keep file reference for lazy loading
+                                    url: null,   // Don't create URL until image is clicked
+                                    latitude: latitude,
+                                    longitude: longitude,
+                                    altitude: altitude,
+                                    gimbalPitch: gimbalPitch,
+                                    gimbalRoll: gimbalRoll,
+                                    gimbalYaw: gimbalYaw,
+                                    flightPitch: flightPitch,
+                                    flightRoll: flightRoll,
+                                    flightYaw: flightYaw,
+                                    heading: heading,
+                                    cluster: -1
+                                });
+                            });
+                        };
+                        img.src = e.target.result;
+                    };
+                    // CRITICAL MEMORY FIX: Read only header slice, not entire file
+                    reader.readAsDataURL(headerSlice);
+                } catch (error) {
+                    console.error(`Error processing ${file.name}:`, error);
+                    resolve(null);
+                }
+            });
+        }
+
+        /**
+         * Extract XMP data from JPEG file ArrayBuffer
+         */
+        function extractXMPFromFile(arrayBuffer) {
+            try {
+                const bytes = new Uint8Array(arrayBuffer);
+                
+                // Convert to string for searching
+                let data = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    data += String.fromCharCode(bytes[i]);
+                }
+                
+                // Look for x:xmpmeta tags
+                let xmpStart = data.indexOf('<x:xmpmeta');
+                let xmpEnd = data.indexOf('</x:xmpmeta>');
+                
+                if (xmpStart !== -1 && xmpEnd !== -1) {
+                    return data.substring(xmpStart, xmpEnd + 12);
+                }
+                
+                // Alternative: look for rdf:Description
+                xmpStart = data.indexOf('<rdf:Description');
+                xmpEnd = data.lastIndexOf('</rdf:Description>');
+                
+                if (xmpStart !== -1 && xmpEnd !== -1) {
+                    return data.substring(xmpStart, xmpEnd + 18);
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('Error extracting XMP:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Parse a float value from XMP data
+         * DJI format: drone-dji:GimbalPitchDegree="-45.00"
+         */
+        function parseXMPFloat(xmpString, fieldName, defaultValue) {
+            if (!xmpString) return defaultValue;
+            
+            try {
+                // DJI uses CamelCase with no spaces: GimbalPitchDegree, FlightYawDegree, etc.
+                const pattern = new RegExp(`drone-dji:${fieldName}="([^"]+)"`, 'i');
+                const match = xmpString.match(pattern);
+                
+                if (match && match[1]) {
+                    // Remove leading + sign if present, keep - for negative
+                    const value = parseFloat(match[1].replace(/^\+/, ''));
+                    if (!isNaN(value)) {
+                        return value;
+                    }
+                }
+            } catch (error) {
+                console.error(`Error parsing ${fieldName}:`, error);
+            }
+            
+            return defaultValue;
+        }
+
+        function convertDMSToDD(dms, ref) {
+            const degrees = dms[0];
+            const minutes = dms[1];
+            const seconds = dms[2];
+            let dd = degrees + minutes/60 + seconds/3600;
+            if (ref === 'S' || ref === 'W') dd = -dd;
+            return dd;
+        }
+
+        function calculateGroundFootprint(imageData) {
+            const { latitude, longitude, altitude, gimbalPitch, heading } = imageData;
+            
+            // Calculate angle from nadir
+            const angleFromNadir = Math.abs(90 + gimbalPitch);
+            
+            // Get FOV and oblique offset from UI
+            const diagonalFov = parseFloat(document.getElementById('fovAssumption').value);
+            const obliqueOffset = parseFloat(document.getElementById('obliqueOffset').value);
+            
+            const aspectRatio = 4 / 3;
+            const diagRad = diagonalFov * Math.PI / 180;
+            const tanHalfDiag = Math.tan(diagRad / 2);
+            const tanHalfV = tanHalfDiag / Math.sqrt(aspectRatio * aspectRatio + 1);
+            const vFov = 2 * Math.atan(tanHalfV) * 180 / Math.PI;
+            const halfVFov = vFov / 2;
+            
+            // Calculate near and far edge angles
+            // Near edge = closer to straight down, smaller angle, NARROW edge (high pixel density)
+            // Far edge = farther from straight down, larger angle, WIDE edge (low pixel density)
+            const nearEdgeAngle = angleFromNadir - halfVFov;  // Closer to nadir
+            const farEdgeAngle = angleFromNadir + halfVFov;   // Farther from nadir
+            
+            // Calculate distances
+            //hard limit it to altitude * 5
+            const nearDist = altitude * Math.tan(nearEdgeAngle * Math.PI / 180);
+            const farDist = Math.min(
+                (farEdgeAngle >= 90 ? altitude * 5 : altitude * Math.tan(farEdgeAngle * Math.PI / 180)),
+                altitude * 5
+            );
+            
+            // Determine if this is an oblique image (camera position outside footprint)
+            // For oblique images, nearDist will be positive (camera is between origin and near edge)
+            const isOblique = nearDist > 0;
+            
+            // Apply oblique offset weight - only for oblique images
+            // For nadir/near-nadir images, use geometric center
+            // For oblique images, shift toward NEAR edge (narrow edge, high pixel density)
+            let centerDist;
+            
+            if (!isOblique || obliqueOffset === 0) {
+                // Nadir or no offset: use geometric center
+                centerDist = (nearDist + farDist) / 2;
+            } else {
+                // Oblique with offset: shift from geometric center toward NEAR edge
+                // 0 = geometric center (midpoint)
+                // 10 = near edge (high pixel density area)
+                const offsetFactor = obliqueOffset / 10;  // 0 to 1
+                const geometricCenter = (nearDist + farDist) / 2;
+                // Since nearDist is negative for oblique images, moving toward it
+                // means reducing the distance (moving back toward camera)
+                centerDist = geometricCenter + offsetFactor * (nearDist - geometricCenter);
+            }
+            
+            const headingRad = heading * Math.PI / 180;
+            const offsetNorth = centerDist * Math.cos(headingRad);
+            const offsetEast = centerDist * Math.sin(headingRad);
+            
+            const latOffset = offsetNorth / 111000;
+            const lonOffset = offsetEast / (111000 * Math.cos(latitude * Math.PI / 180));
+            
+            return {
+                lat: latitude + latOffset,
+                lon: longitude + lonOffset,
+                distance: centerDist
+            };
+        }
+
+        function calculateFootprintTrapezoid(imageData) {
+            const { latitude, longitude, altitude, gimbalPitch, heading } = imageData;
+            const diagonalFov = parseFloat(document.getElementById('fovAssumption').value);
+            
+            // Mavic 3E specs: 4/3" sensor, 4:3 aspect ratio, 84° diagonal FOV
+            // Convert diagonal FOV to horizontal and vertical FOV
+            // For 4:3 aspect ratio: diagonal² = horizontal² + vertical²
+            // And: horizontal/vertical = 4/3
+            
+            const aspectRatio = 4 / 3;  // Width / Height
+            
+            // Using the formula for diagonal FOV:
+            // tan(diagonal/2) = sqrt(tan²(h/2) + tan²(v/2))
+            // With aspect ratio constraint: tan(h/2) = aspectRatio * tan(v/2)
+            
+            const diagRad = diagonalFov * Math.PI / 180;
+            const tanHalfDiag = Math.tan(diagRad / 2);
+            
+            // Solve for vertical FOV
+            // tan(halfDiag)² = tan²(h/2) + tan²(v/2)
+            // tan(halfDiag)² = aspectRatio² * tan²(v/2) + tan²(v/2)
+            // tan(halfDiag)² = tan²(v/2) * (aspectRatio² + 1)
+            const tanHalfV = tanHalfDiag / Math.sqrt(aspectRatio * aspectRatio + 1);
+            const vFov = 2 * Math.atan(tanHalfV) * 180 / Math.PI;
+            
+            // Calculate horizontal FOV
+            const tanHalfH = aspectRatio * tanHalfV;
+            const hFov = 2 * Math.atan(tanHalfH) * 180 / Math.PI;
+            
+            // Gimbal pitch: -90° = nadir (straight down), 0° = horizon, -45° = 45° from nadir
+            // Convert to angle from nadir (0° = straight down, 90° = horizontal)
+            const angleFromNadir = Math.abs(90 + gimbalPitch);
+            
+            // Calculate the angles to the four corners of the FOV
+            const halfVFov = vFov / 2;
+            const halfHFov = hFov / 2;
+            
+            // Calculate the angles to the edges of the FOV
+            // Note: Top of sensor images the FAR edge (farther from drone)
+            //       Bottom of sensor images the NEAR edge (closer to drone)
+            // But we'll call them "near" and "far" based on ground distance for clarity
+            
+            const nearEdgeAngle = angleFromNadir - halfVFov;  // Closer to straight down
+            const farEdgeAngle = angleFromNadir + halfVFov;   // Farther from straight down
+            
+            let nearDist, farDist;
+            
+            // Simple formula: distance = altitude * tan(angle_from_nadir)
+            // Distance can be negative (means that edge is behind the drone)
+            nearDist = altitude * Math.tan(nearEdgeAngle * Math.PI / 180);
+            
+            if (farEdgeAngle >= 90) {
+                farDist = altitude * 5;  // Past horizon - very far
+            } else {
+                farDist = Math.min(altitude * Math.tan(farEdgeAngle * Math.PI / 180), altitude * 5);
+            }
+            
+
+
+            //calculate the slope distance
+            const nearSlopeDist = Math.abs(nearDist / Math.sin(nearEdgeAngle * Math.PI / 180));
+            const farSlopeDist = Math.abs(farDist / Math.sin(farEdgeAngle * Math.PI / 180));
+
+            // Calculate widths at each slope distance
+            // Use ABSOLUTE VALUE of distance for width calculation to prevent negative widths
+            const nearWidth = 2 * Math.abs(nearSlopeDist) * Math.tan(halfHFov * Math.PI / 180);
+            const farWidth = 2 * Math.abs(farSlopeDist) * Math.tan(halfHFov * Math.PI / 180);
+            
+            // console.log(`Angle from nadir: ${angleFromNadir.toFixed(1)}°, Near dist: ${nearDist.toFixed(1)}m, Far dist: ${farDist.toFixed(1)}m`);
+            // console.log(`Near width: ${nearWidth.toFixed(1)}m, Far width: ${farWidth.toFixed(1)}m`);
+            
+            // Convert heading to radians
+            const headingRad = heading * Math.PI / 180;
+            const perpHeadingRad = headingRad + Math.PI / 2;  // Perpendicular for width
+            
+            // Build trapezoid corners
+            // CRITICAL: Points must be in order around the perimeter (clockwise or counter-clockwise)
+            // Going: Near-left → Near-right → Far-right → Far-left creates correct trapezoid
+            // The issue was the order creates a crossing/pretzel if we don't maintain perimeter order
+            const points = [];
+            
+            // Near-left (closer to drone, left side)
+            points.push([
+                latitude + (nearDist * Math.cos(headingRad) - nearWidth/2 * Math.cos(perpHeadingRad)) / 111000,
+                longitude + (nearDist * Math.sin(headingRad) - nearWidth/2 * Math.sin(perpHeadingRad)) / (111000 * Math.cos(latitude * Math.PI / 180))
+            ]);
+            
+            // Near-right (closer to drone, right side)
+            points.push([
+                latitude + (nearDist * Math.cos(headingRad) + nearWidth/2 * Math.cos(perpHeadingRad)) / 111000,
+                longitude + (nearDist * Math.sin(headingRad) + nearWidth/2 * Math.sin(perpHeadingRad)) / (111000 * Math.cos(latitude * Math.PI / 180))
+            ]);
+            
+            // Far-right (farther from drone, right side)
+            points.push([
+                latitude + (farDist * Math.cos(headingRad) + farWidth/2 * Math.cos(perpHeadingRad)) / 111000,
+                longitude + (farDist * Math.sin(headingRad) + farWidth/2 * Math.sin(perpHeadingRad)) / (111000 * Math.cos(latitude * Math.PI / 180))
+            ]);
+            
+            // Far-left (farther from drone, left side)
+            points.push([
+                latitude + (farDist * Math.cos(headingRad) - farWidth/2 * Math.cos(perpHeadingRad)) / 111000,
+                longitude + (farDist * Math.sin(headingRad) - farWidth/2 * Math.sin(perpHeadingRad)) / (111000 * Math.cos(latitude * Math.PI / 180))
+            ]);
+            
+            return points;
+        }
+
+        function displayImagesOnMap() {
+            // Clear existing markers
+            markersByCluster = {};
+            
+            images.forEach((img, idx) => {
+                // Check if image is in multiple clusters (overlap)
+                const isOverlap = img.clusters && img.clusters.length > 1;
+                const primaryCluster = img.cluster;
+                const clusterColor = primaryCluster >= 0 
+                    ? clusterColors[primaryCluster % clusterColors.length]
+                    : '#3498db';
+                
+                // For overlap images, create multi-color indicator
+                let markerStyle;
+                if (isOverlap) {
+                    // Get colors for all clusters this image belongs to
+                    const colors = img.clusters.map(c => clusterColors[c % clusterColors.length]);
+                    const numClusters = colors.length;
+                    
+                    // Use first color as fill, create dashed border with alternating colors
+                    markerStyle = {
+                        radius: 5 + numClusters,  // Larger for more clusters
+                        fillColor: colors[0],
+                        color: colors[1] || colors[0],
+                        weight: 2 + numClusters,  // Thicker border for more clusters
+                        opacity: 1,
+                        fillOpacity: 0.9,
+                        dashArray: numClusters > 2 ? '4,4' : null  // Dashed for 3+ clusters
+                    };
+                } else {
+                    markerStyle = {
+                        radius: 4,
+                        fillColor: '#000000',
+                        color: '#000000',
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    };
+                }
+
+                const marker = L.circleMarker([img.latitude, img.longitude], markerStyle);
+
+                // Add cluster number label if clustered
+                if (primaryCluster >= 0) {
+                    // For overlap images, show all cluster numbers
+                    const labelText = isOverlap 
+                        ? img.clusters.join('/') 
+                        : String(primaryCluster);
+                    
+                    // For overlap, use multi-segment gradient background
+                    let labelStyle;
+                    if (isOverlap) {
+                        const colors = img.clusters.map(c => clusterColors[c % clusterColors.length]);
+                        const numClusters = colors.length;
+                        
+                        // Create conic gradient for 2-4 colors
+                        let gradient;
+                        if (numClusters === 2) {
+                            gradient = `linear-gradient(135deg, ${colors[0]} 50%, ${colors[1]} 50%)`;
+                        } else if (numClusters === 3) {
+                            gradient = `conic-gradient(from 0deg, ${colors[0]} 0deg 120deg, ${colors[1]} 120deg 240deg, ${colors[2]} 240deg 360deg)`;
+                        } else {
+                            // 4+ clusters - quarters
+                            gradient = `conic-gradient(from 0deg, ${colors[0]} 0deg 90deg, ${colors[1]} 90deg 180deg, ${colors[2] || colors[0]} 180deg 270deg, ${colors[3] || colors[1]} 270deg 360deg)`;
+                        }
+                        
+                        // Larger label for more cluster numbers
+                        const labelSize = 18 + (numClusters - 2) * 4;
+                        const fontSize = Math.max(5, 8 - numClusters);
+                        
+                        labelStyle = `
+                            background: ${gradient};
+                            color: white;
+                            text-shadow: 0 0 2px black, 0 0 2px black;
+                            border: 2px solid white;
+                            border-radius: 50%;
+                            width: ${labelSize}px;
+                            height: ${labelSize}px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: ${fontSize}px;
+                            font-weight: 700;
+                            pointer-events: none;
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+                        `;
+                    } else {
+                        labelStyle = `
+                            background: rgba(255, 255, 255, 0.2);
+                            color: #333;
+                            border: 1px solid ${clusterColor};
+                            border-radius: 50%;
+                            width: 16px;
+                            height: 16px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 8px;
+                            font-weight: 700;
+                            pointer-events: none;
+                        `;
+                    }
+                    
+                    const labelSize = isOverlap ? 18 + (img.clusters.length - 2) * 4 : 16;
+                    const divIcon = L.divIcon({
+                        className: 'cluster-number-label',
+                        html: `<div style="${labelStyle}">${labelText}</div>`,
+                        iconSize: [labelSize, labelSize],
+                        iconAnchor: [labelSize / 2, labelSize / 2]
+                    });
+                    const labelMarker = L.marker([img.latitude, img.longitude], {
+                        icon: divIcon,
+                        zIndexOffset: isOverlap ? 2000 : 1000  // Overlap markers on top
+                    });
+                    
+                    // Check if markers should be hidden
+                    const showMarkersCheckbox = document.getElementById('showMarkersCheckbox');
+                    if (showMarkersCheckbox && !showMarkersCheckbox.checked) {
+                        // Hide marker on creation
+                        setTimeout(() => {
+                            const labelEl = labelMarker.getElement();
+                            if (labelEl) labelEl.style.display = 'none';
+                        }, 0);
+                    }
+                    
+                    // Add hover events to label marker too
+                    labelMarker.on('mouseover', function() {
+                        if (currentFootprint) {
+                            map.removeLayer(currentFootprint);
+                        }
+                        if (currentFootprintDot) {
+                            map.removeLayer(currentFootprintDot);
+                        }
+                        
+                        const trapezoid = calculateFootprintTrapezoid(img);
+                        const footprintCenter = calculateGroundFootprint(img);
+                        
+                        // Create trapezoid with high z-index (above markers)
+                        currentFootprint = L.polygon(trapezoid, {
+                            color: clusterColor,
+                            weight: 2,
+                            fillColor: clusterColor,
+                            fillOpacity: 0.2,
+                            dashArray: '5, 5',
+                            interactive: false,
+                            pane: 'hoverPane'  // Custom high z-index pane
+                        }).addTo(map);
+                        
+                        // Add center dot with target/checkerboard pattern
+                        const targetIcon = L.divIcon({
+                            className: 'footprint-target',
+                            html: `<div style="
+                                width: 14px;
+                                height: 14px;
+                                border-radius: 50%;
+                                background: conic-gradient(#2B2B2B 0deg 90deg, #D6D6D6 90deg 180deg, #2B2B2B 180deg 270deg, #D6D6D6 270deg 360deg);
+                                border: 2px solid white;
+                                box-shadow: 0 0 4px rgba(0,0,0,0.5);
+                            "></div>`,
+                            iconSize: [18, 18],
+                            iconAnchor: [9, 9]
+                        });
+                        currentFootprintDot = L.marker([footprintCenter.lat, footprintCenter.lon], {
+                            icon: targetIcon,
+                            interactive: false,
+                            pane: 'hoverPane'
+                        }).addTo(map);
+
+                        updateImageInfo(img);
+                    });
+                    
+                    labelMarker.on('mouseout', function() {
+                        if (currentFootprint) {
+                            map.removeLayer(currentFootprint);
+                            currentFootprint = null;
+                        }
+                        if (currentFootprintDot) {
+                            map.removeLayer(currentFootprintDot);
+                            currentFootprintDot = null;
+                        }
+                    });
+                    
+                    labelMarker.on('click', function() {
+                        displayImage(img);
+                    });
+                    
+                    // Store label marker in markersByCluster too
+                    const clusterIdx = img.cluster;
+                    if (!markersByCluster[clusterIdx]) {
+                        markersByCluster[clusterIdx] = [];
+                    }
+                    markersByCluster[clusterIdx].push(labelMarker);
+                    
+                    // Add to map (visible by default, controlled by cluster checkbox)
+                    labelMarker.addTo(map);
+                    
+                    markers.push(labelMarker);
+                }
+
+                marker.on('mouseover', function() {
+                    if (currentFootprint) {
+                        map.removeLayer(currentFootprint);
+                    }
+                    if (currentFootprintDot) {
+                        map.removeLayer(currentFootprintDot);
+                    }
+                    
+                    const trapezoid = calculateFootprintTrapezoid(img);
+                    const footprintCenter = calculateGroundFootprint(img);
+                    
+                    // Create trapezoid with high z-index (above markers)
+                    currentFootprint = L.polygon(trapezoid, {
+                        color: color,
+                        weight: 2,
+                        fillColor: color,
+                        fillOpacity: 0.2,
+                        dashArray: '5, 5',
+                        interactive: false,
+                        pane: 'hoverPane'  // Custom high z-index pane
+                    }).addTo(map);
+                    
+                    // Add center dot with target/checkerboard pattern
+                    const targetIcon = L.divIcon({
+                        className: 'footprint-target',
+                        html: `<div style="
+                            width: 14px;
+                            height: 14px;
+                            border-radius: 50%;
+                            background: conic-gradient(#2B2B2B 0deg 90deg, #D6D6D6 90deg 180deg, #2B2B2B 180deg 270deg, #D6D6D6 270deg 360deg);
+                            border: 2px solid white;
+                            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+                        "></div>`,
+                        iconSize: [18, 18],
+                        iconAnchor: [9, 9]
+                    });
+                    currentFootprintDot = L.marker([footprintCenter.lat, footprintCenter.lon], {
+                        icon: targetIcon,
+                        interactive: false,
+                        pane: 'hoverPane'
+                    }).addTo(map);
+
+                    updateImageInfo(img);
+                });
+
+                marker.on('mouseout', function() {
+                    if (currentFootprint) {
+                        map.removeLayer(currentFootprint);
+                        currentFootprint = null;
+                    }
+                    if (currentFootprintDot) {
+                        map.removeLayer(currentFootprintDot);
+                        currentFootprintDot = null;
+                    }
+                });
+
+                marker.on('click', function() {
+                    displayImage(img);
+                });
+
+                // Don't store black circle markers in markersByCluster
+                // They are never shown after initial clustering (only before clustering for unclustered images)
+                // Only numbered label markers are managed for visibility
+                
+                // Add to map only if unclustered (before clustering or noise)
+                // After clustering, only numbered labels are visible
+                if (img.cluster === -1) {
+                    marker.addTo(map);
+                }
+                
+                markers.push(marker);
+            });
+
+            if (images.length > 0) {
+                const bounds = L.latLngBounds(images.map(img => [img.latitude, img.longitude]));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        function updateImageInfo(img) {
+            const footprint = calculateGroundFootprint(img);
+            
+            // Determine cluster display text
+            let clusterText = '';
+            if (img.clusters && img.clusters.length > 1) {
+                // Image is in multiple clusters (overlap)
+                clusterText = `<div><label>Clusters:</label><span>${img.clusters.join(', ')}</span></div>`;
+            } else if (img.cluster >= 0) {
+                // Image is in single cluster
+                clusterText = `<div><label>Cluster:</label><span>${img.cluster}</span></div>`;
+            }
+            
+            const infoHtml = `
+                <div><label>Filename:</label><span>${img.filename}</span></div>
+                <div><label>GPS:</label><span>${img.latitude.toFixed(6)}, ${img.longitude.toFixed(6)}</span></div>
+                <div><label>Altitude:</label><span>${img.altitude.toFixed(1)} m</span></div>
+                <div><label>Gimbal:</label><span>${img.gimbalPitch.toFixed(1)}°</span></div>
+                <div><label>Heading:</label><span>${img.heading.toFixed(1)}°</span></div>
+                <div><label>Footprint:</label><span>${footprint.distance.toFixed(1)}m away</span></div>
+                ${clusterText}
+            `;
+            document.getElementById('imageInfo').innerHTML = infoHtml;
+        }
+
+        function displayImage(img) {
+            const preview = document.getElementById('imagePreview');
+            
+            // Create URL on demand if not already created
+            if (!img.url) {
+                img.url = URL.createObjectURL(img.file);
+            }
+            
+            preview.innerHTML = `<img src="${img.url}" alt="${img.filename}">`;
+            updateImageInfo(img);
+        }
+
+        function updateStats() {
+            document.getElementById('totalImages').textContent = images.length;
+            
+            if (clusters.length > 0) {
+                // Calculate effective sizes including overlap
+                const effectiveSizes = clusters.map((cluster, clusterIdx) => {
+                    let size = cluster.length;
+                    // Add overlap images that belong to this cluster but have a different primary cluster
+                    images.forEach(img => {
+                        if (img.clusters && img.clusters.length > 1 && img.clusters.includes(clusterIdx) && img.cluster !== clusterIdx) {
+                            size++;
+                        }
+                    });
+                    return size;
+                });
+                
+                // Count overlap images
+                const overlapCount = images.filter(img => img.clusters && img.clusters.length > 1).length;
+                
+                const avgSize = effectiveSizes.reduce((a, b) => a + b, 0) / effectiveSizes.length;
+                const minSize = Math.min(...effectiveSizes);
+                const maxSize = Math.max(...effectiveSizes);
+
+                document.getElementById('numClusters').textContent = clusters.length;
+                document.getElementById('avgSize').textContent = avgSize.toFixed(0);
+                document.getElementById('sizeRange').textContent = `${minSize}/${maxSize}`;
+                document.getElementById('overlapCount').textContent = overlapCount;
+            } else {
+                document.getElementById('numClusters').textContent = '0';
+                document.getElementById('avgSize').textContent = '0';
+                document.getElementById('sizeRange').textContent = '0/0';
+                document.getElementById('overlapCount').textContent = '0';
+            }
+        }
+
+        // Clustering button
+        document.getElementById('clusterBtn').addEventListener('click', () => {
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('status').textContent = 'Clustering images...';
+
+            setTimeout(() => {
+                performClustering();
+                
+                markers.forEach(m => map.removeLayer(m));
+                markers = [];
+                displayImagesOnMap();
+                updateStats();
+                createClusterFootprints();
+                updateClusterCheckboxes();
+
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('exportBtn').disabled = false;
+                document.getElementById('rebalanceBtn').disabled = false;
+                document.getElementById('status').textContent = `Created ${clusters.length} clusters`;
+            }, 100);
+        });
+
+        // Rebalance button - run additional rebalancing iterations
+        document.getElementById('rebalanceBtn').addEventListener('click', () => {
+            if (clusters.length === 0) {
+                alert('No clusters to rebalance!');
+                return;
+            }
+            
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('status').textContent = 'Rebalancing clusters...';
+
+            setTimeout(() => {
+                const targetSize = parseInt(document.getElementById('clusterSize').value);
+                const eps = parseFloat(document.getElementById('eps').value);
+                
+                // Run rebalancing
+                rebalanceClusters(targetSize, eps);
+                
+                // Refresh visualization
+                markers.forEach(m => map.removeLayer(m));
+                markers = [];
+                displayImagesOnMap();
+                updateStats();
+                createClusterFootprints();
+                updateClusterCheckboxes();
+
+                document.getElementById('loading').classList.remove('active');
+                const sizes = clusters.map(c => c.length);
+                document.getElementById('status').textContent = `Rebalanced: min=${Math.min(...sizes)}, max=${Math.max(...sizes)}, avg=${(sizes.reduce((a,b)=>a+b,0)/sizes.length).toFixed(1)}`;
+            }, 100);
+        });
+
+        function createClusterFootprints() {
+            // Clear existing footprints, alpha shapes, and center dots
+            Object.values(clusterFootprintLayers).forEach(layer => map.removeLayer(layer));
+            Object.values(clusterAlphaShapeLayers).forEach(layer => map.removeLayer(layer));
+            Object.values(clusterCenterDots).forEach(layer => map.removeLayer(layer));
+            clusterFootprintLayers = {};
+            clusterAlphaShapeLayers = {};
+            clusterCenterDots = {};
+            
+            clusters.forEach((cluster, clusterIdx) => {
+                // Calculate convex hull of all image footprints in cluster
+                const allFootprintPoints = [];
+                
+                cluster.forEach(img => {
+                    const trapezoid = calculateFootprintTrapezoid(img);
+                    allFootprintPoints.push(...trapezoid);
+                });
+                
+                // Simple convex hull using gift wrapping algorithm
+                const hull = convexHull(allFootprintPoints);
+                
+                if (hull.length >= 3) {
+                    const color = clusterColors[clusterIdx % clusterColors.length];
+                    const polygon = L.polygon(hull, {
+                        color: 'none',
+                        fillColor: color,
+                        fillOpacity: 0.3,
+                        interactive: false
+                    });
+                    
+                    clusterFootprintLayers[clusterIdx] = polygon;
+                    
+                    // Add to map immediately (visible by default)
+                    polygon.addTo(map);
+                }
+            });
+            
+            // Create alpha shape boundaries and center dots
+            createAlphaShapes();
+        }
+
+        function createAlphaShapes() {
+            if (clusters.length === 0) return;
+            
+            // Clear stored boundaries
+            clusterBoundaries = [];
+            
+            // Get EPS parameter for alpha value
+            // Alpha controls how "tight" the shape wraps around points
+            // Smaller alpha = more concave (but too small filters everything)
+            const eps = parseFloat(document.getElementById('eps').value);
+            const alpha = eps * 2.0;  // 2x EPS allows concave shapes while keeping triangles
+            
+            console.log(`Creating alpha shapes with alpha=${alpha.toFixed(1)}m (EPS=${eps}m)`);
+            
+            clusters.forEach((cluster, clusterIdx) => {
+                // Calculate GEOGRAPHIC center for visualization (area-weighted)
+                const center = calculateGeographicCenter(cluster);
+                const color = clusterColors[clusterIdx % clusterColors.length];
+                
+                const centerDot = L.circleMarker([center.lat, center.lon], {
+                    radius: 4,
+                    fillColor: color,
+                    color: 'white',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 1,
+                    interactive: false
+                });
+                
+                clusterCenterDots[clusterIdx] = centerDot;
+                centerDot.addTo(map);
+                
+                // Get all footprint centers for this cluster
+                const footprintCenters = cluster.map(img => {
+                    const fp = calculateGroundFootprint(img);
+                    return [fp.lat, fp.lon];
+                });
+                
+                let boundary = null;
+                
+                if (footprintCenters.length < 3) {
+                    // Too few points, just draw convex hull
+                    const hull = convexHull(footprintCenters);
+                    if (hull.length >= 3) {
+                        boundary = hull;
+                        const alphaShape = L.polygon(hull, {
+                            color: color,
+                            weight: 2,
+                            opacity: 1,
+                            fill: false,
+                            interactive: false
+                        });
+                        clusterAlphaShapeLayers[clusterIdx] = alphaShape;
+                        alphaShape.addTo(map);
+                    }
+                } else {
+                    // Compute alpha shape using Delaunay triangulation
+                    const alphaShapeBoundary = computeAlphaShape(footprintCenters, alpha);
+                    
+                    console.log(`Cluster ${clusterIdx}: ${footprintCenters.length} points → ${alphaShapeBoundary ? alphaShapeBoundary.length : 0} boundary vertices`);
+                    
+                    if (alphaShapeBoundary && alphaShapeBoundary.length >= 3) {
+                        boundary = alphaShapeBoundary;
+                        const alphaShape = L.polygon(alphaShapeBoundary, {
+                            color: color,
+                            weight: 2,
+                            opacity: 1,
+                            fill: false,
+                            interactive: false
+                        });
+                        
+                        clusterAlphaShapeLayers[clusterIdx] = alphaShape;
+                        alphaShape.addTo(map);
+                    }
+                }
+                
+                // Store boundary for overlap calculation
+                clusterBoundaries[clusterIdx] = boundary;
+            });
+            
+            // Calculate overlap after boundaries are created
+            calculateClusterOverlap();
+        }
+        
+        // ======================================================
+        // Cluster Overlap Calculation
+        // Finds images near cluster boundaries for multi-cluster assignment
+        // ======================================================
+        
+        function calculateClusterOverlap() {
+            const overlapMeters = parseFloat(document.getElementById('overlap').value) || 0;
+            
+            // Clear previous overlap assignments
+            images.forEach(img => {
+                img.clusters = null;
+            });
+            
+            if (overlapMeters <= 0 || clusters.length < 2) {
+                console.log('Overlap disabled or insufficient clusters');
+                return;
+            }
+            
+            // Half distance - each cluster extends halfway into overlap zone
+            const halfOverlap = overlapMeters / 2;
+            
+            console.log(`Calculating overlap: ${overlapMeters}m total (${halfOverlap}m per side)`);
+            
+            let overlapCount = 0;
+            
+            images.forEach(img => {
+                if (img.cluster < 0) return;
+                
+                const fp = calculateGroundFootprint(img);
+                const imgPoint = [fp.lat, fp.lon];
+                const primaryCluster = img.cluster;
+                
+                // Start with primary cluster
+                const memberClusters = new Set([primaryCluster]);
+                
+                // Check distance to other cluster boundaries
+                clusters.forEach((cluster, clusterIdx) => {
+                    if (clusterIdx === primaryCluster) return;
+                    
+                    const boundary = clusterBoundaries[clusterIdx];
+                    if (!boundary || boundary.length < 3) return;
+                    
+                    // Calculate minimum distance from point to polygon boundary
+                    const distMeters = pointToPolygonDistance(imgPoint, boundary);
+                    
+                    if (distMeters <= halfOverlap) {
+                        memberClusters.add(clusterIdx);
+                    }
+                });
+                
+                // Assign clusters array if image belongs to multiple
+                if (memberClusters.size > 1) {
+                    img.clusters = Array.from(memberClusters).sort((a, b) => a - b);
+                    overlapCount++;
+                }
+            });
+            
+            console.log(`Overlap calculation complete: ${overlapCount} images in multiple clusters`);
+            
+            // Refresh markers to show overlap styling
+            if (overlapCount > 0) {
+                markers.forEach(m => map.removeLayer(m));
+                markers = [];
+                displayImagesOnMap();
+            }
+        }
+        
+        // Calculate minimum distance from a point to a polygon boundary (in meters)
+        function pointToPolygonDistance(point, polygon) {
+            const lat = point[0];
+            const lon = point[1];
+            
+            // Convert to meters for distance calculation
+            const metersPerDegLat = 111000;
+            const metersPerDegLon = 111000 * Math.cos(lat * Math.PI / 180);
+            
+            const px = lon * metersPerDegLon;
+            const py = lat * metersPerDegLat;
+            
+            let minDist = Infinity;
+            
+            // Check distance to each edge of the polygon
+            for (let i = 0; i < polygon.length; i++) {
+                const j = (i + 1) % polygon.length;
+                
+                const ax = polygon[i][1] * metersPerDegLon;
+                const ay = polygon[i][0] * metersPerDegLat;
+                const bx = polygon[j][1] * metersPerDegLon;
+                const by = polygon[j][0] * metersPerDegLat;
+                
+                const dist = pointToSegmentDistance(px, py, ax, ay, bx, by);
+                if (dist < minDist) {
+                    minDist = dist;
+                }
+            }
+            
+            return minDist;
+        }
+        
+        // Distance from point (px, py) to line segment (ax, ay)-(bx, by)
+        function pointToSegmentDistance(px, py, ax, ay, bx, by) {
+            const dx = bx - ax;
+            const dy = by - ay;
+            const lengthSq = dx * dx + dy * dy;
+            
+            if (lengthSq === 0) {
+                // Segment is a point
+                return Math.sqrt((px - ax) * (px - ax) + (py - ay) * (py - ay));
+            }
+            
+            // Project point onto line, clamped to segment
+            let t = ((px - ax) * dx + (py - ay) * dy) / lengthSq;
+            t = Math.max(0, Math.min(1, t));
+            
+            const nearestX = ax + t * dx;
+            const nearestY = ay + t * dy;
+            
+            return Math.sqrt((px - nearestX) * (px - nearestX) + (py - nearestY) * (py - nearestY));
+        }
+
+        // ======================================================
+        // Alpha Shapes using Delaunator
+        // Proper concave hull via Delaunay triangulation
+        // ======================================================
+        
+        function computeAlphaShape(points, alphaMeters) {
+            if (points.length < 3) return points;
+            if (points.length === 3) return points;
+            
+            // Check if Delaunator is available
+            if (typeof Delaunator === 'undefined') {
+                console.warn('Delaunator library not loaded, using convex hull');
+                return convexHull(points);
+            }
+            
+            // Get alpha from UI control (in meters)
+            const alphaValue = parseFloat(document.getElementById('hullConcavity').value) || 100;
+            
+            // Convert lat/lon points to meter coordinates for triangulation
+            const refLat = points[0][0];
+            const metersPerDegLat = 111000;
+            const metersPerDegLon = 111000 * Math.cos(refLat * Math.PI / 180);
+            
+            // Create flat coordinate array for Delaunator [x0, y0, x1, y1, ...]
+            const coords = new Float64Array(points.length * 2);
+            for (let i = 0; i < points.length; i++) {
+                coords[i * 2] = points[i][1] * metersPerDegLon;     // x = lon in meters
+                coords[i * 2 + 1] = points[i][0] * metersPerDegLat; // y = lat in meters
+            }
+            
+            // Run Delaunay triangulation
+            let delaunay;
+            try {
+                delaunay = new Delaunator(coords);
+            } catch (e) {
+                console.log(`  Delaunator failed: ${e.message}, using convex hull`);
+                return convexHull(points);
+            }
+            
+            const triangles = delaunay.triangles;
+            const numTriangles = triangles.length / 3;
+            
+            console.log(`  Alpha shape: ${points.length} points, ${numTriangles} triangles, alpha=${alphaValue}m`);
+            
+            // Find edges that belong to triangles with circumradius <= alpha
+            // An edge is on the boundary if it belongs to exactly one valid triangle
+            const edgeCount = new Map(); // edge key -> count of valid triangles
+            const edgeToPoints = new Map(); // edge key -> [p1, p2]
+            
+            for (let t = 0; t < numTriangles; t++) {
+                const i0 = triangles[t * 3];
+                const i1 = triangles[t * 3 + 1];
+                const i2 = triangles[t * 3 + 2];
+                
+                // Get triangle vertices in meters
+                const x0 = coords[i0 * 2], y0 = coords[i0 * 2 + 1];
+                const x1 = coords[i1 * 2], y1 = coords[i1 * 2 + 1];
+                const x2 = coords[i2 * 2], y2 = coords[i2 * 2 + 1];
+                
+                // Calculate circumradius
+                const circumradius = calcCircumradius(x0, y0, x1, y1, x2, y2);
+                
+                // Only include triangle if circumradius <= alpha
+                if (circumradius <= alphaValue) {
+                    // Add all three edges
+                    const edges = [
+                        [Math.min(i0, i1), Math.max(i0, i1)],
+                        [Math.min(i1, i2), Math.max(i1, i2)],
+                        [Math.min(i2, i0), Math.max(i2, i0)]
+                    ];
+                    
+                    for (const [a, b] of edges) {
+                        const key = `${a}-${b}`;
+                        edgeCount.set(key, (edgeCount.get(key) || 0) + 1);
+                        if (!edgeToPoints.has(key)) {
+                            edgeToPoints.set(key, [a, b]);
+                        }
+                    }
+                }
+            }
+            
+            // Boundary edges appear exactly once (interior edges appear twice)
+            const boundaryEdges = [];
+            for (const [key, count] of edgeCount) {
+                if (count === 1) {
+                    boundaryEdges.push(edgeToPoints.get(key));
+                }
+            }
+            
+            console.log(`  Found ${boundaryEdges.length} boundary edges`);
+            
+            if (boundaryEdges.length < 3) {
+                console.log(`  Not enough boundary edges, using convex hull`);
+                return convexHull(points);
+            }
+            
+            // Chain edges into ordered polygon(s) - get the largest ring
+            const polygon = chainEdgesLargest(boundaryEdges, points);
+            
+            if (!polygon || polygon.length < 3) {
+                console.log(`  Edge chaining failed, using convex hull`);
+                return convexHull(points);
+            }
+            
+            // Convert point indices back to lat/lon
+            const result = polygon.map(idx => points[idx]);
+            
+            console.log(`  Alpha shape complete: ${result.length} boundary vertices`);
+            return result;
+        }
+        
+        function calcCircumradius(x0, y0, x1, y1, x2, y2) {
+            // Calculate circumradius of triangle
+            const ax = x1 - x0, ay = y1 - y0;
+            const bx = x2 - x0, by = y2 - y0;
+            
+            const cross = ax * by - ay * bx;
+            if (Math.abs(cross) < 1e-10) {
+                return Infinity; // Degenerate triangle
+            }
+            
+            const al = ax * ax + ay * ay;
+            const bl = bx * bx + by * by;
+            
+            const d = 2 * cross;
+            const cx = (by * al - ay * bl) / d;
+            const cy = (ax * bl - bx * al) / d;
+            
+            return Math.sqrt(cx * cx + cy * cy);
+        }
+        
+        function chainEdgesLargest(edges, points) {
+            // Chain boundary edges into ordered polygon(s)
+            // Returns the largest ring (by vertex count)
+            // Alpha shapes can produce multiple disconnected boundaries
+            
+            if (edges.length === 0) return null;
+            
+            // Build adjacency: point -> list of connected points
+            const adjacency = new Map();
+            for (const [a, b] of edges) {
+                if (!adjacency.has(a)) adjacency.set(a, []);
+                if (!adjacency.has(b)) adjacency.set(b, []);
+                adjacency.get(a).push(b);
+                adjacency.get(b).push(a);
+            }
+            
+            // Find all rings
+            const rings = [];
+            const globalVisited = new Set();
+            
+            for (const [startPoint] of adjacency) {
+                if (globalVisited.has(startPoint)) continue;
+                
+                // Trace a ring starting from this point
+                const ring = [];
+                const ringVisited = new Set();
+                let current = startPoint;
+                
+                const maxIterations = edges.length * 2;
+                let iterations = 0;
+                
+                while (iterations < maxIterations) {
+                    ring.push(current);
+                    ringVisited.add(current);
+                    globalVisited.add(current);
+                    
+                    const neighbors = adjacency.get(current) || [];
+                    let next = null;
+                    
+                    // Find unvisited neighbor
+                    for (const n of neighbors) {
+                        if (!ringVisited.has(n)) {
+                            next = n;
+                            break;
+                        }
+                    }
+                    
+                    if (next === null) {
+                        // Check if we can close the loop
+                        if (neighbors.includes(ring[0]) && ring.length >= 3) {
+                            // Successfully closed the ring
+                            rings.push(ring);
+                        }
+                        break;
+                    }
+                    
+                    current = next;
+                    iterations++;
+                }
+            }
+            
+            if (rings.length === 0) {
+                console.log(`  No complete rings found`);
+                return null;
+            }
+            
+            console.log(`  Found ${rings.length} ring(s), sizes: ${rings.map(r => r.length).join(', ')}`);
+            
+            // Return the largest ring
+            let largest = rings[0];
+            for (const ring of rings) {
+                if (ring.length > largest.length) {
+                    largest = ring;
+                }
+            }
+            
+            return largest;
+        }
+
+
+        // ======================================================
+        // Helpers
+        // ======================================================
+
+        function convexHull(points) {
+            if (points.length < 3) return points;
+            
+            // Use all points - convex hull is fast enough even for thousands of points
+            // Gift wrapping algorithm is O(nh) where h is hull size (usually small)
+            
+            // Find the leftmost point
+            let start = points.reduce((min, p) => p[1] < min[1] ? p : min, points[0]);
+            
+            const hull = [];
+            let current = start;
+            let iterations = 0;
+            const maxIterations = points.length;
+            
+            do {
+                hull.push(current);
+                let next = points[0];
+                
+                for (let i = 1; i < points.length; i++) {
+                    if (next === current || crossProduct(current, next, points[i]) < 0) {
+                        next = points[i];
+                    }
+                }
+                
+                current = next;
+                iterations++;
+            } while (current !== start && iterations < maxIterations && hull.length < points.length);
+            
+            return hull;
+        }
+
+        function crossProduct(o, a, b) {
+            return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+        }
+
+        function updateClusterCheckboxes() {
+            const container = document.getElementById('clusterCheckboxes');
+            const section = document.getElementById('clusterVisibilitySection');
+            
+            if (clusters.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+            
+            section.style.display = 'block';
+            container.innerHTML = '';
+            
+            // Initialize all clusters as visible
+            visibleClusters.clear();
+            clusters.forEach((cluster, idx) => visibleClusters.add(idx));
+            
+            clusters.forEach((cluster, idx) => {
+                const label = document.createElement('label');
+                label.style.display = 'block';
+                label.style.marginBottom = '5px';
+                label.style.cursor = 'pointer';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `cluster-${idx}`;
+                checkbox.value = idx;
+                checkbox.checked = true;  // Default to ON
+                checkbox.style.marginRight = '8px';
+                
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        visibleClusters.add(idx);
+                        // Show footprint
+                        if (clusterFootprintLayers[idx]) {
+                            clusterFootprintLayers[idx].addTo(map);
+                        }
+                        // Show Voronoi boundary
+                        if (clusterAlphaShapeLayers[idx]) {
+                            clusterAlphaShapeLayers[idx].addTo(map);
+                        }
+                        // Show center dot
+                        if (clusterCenterDots[idx]) {
+                            clusterCenterDots[idx].addTo(map);
+                        }
+                        // Show numbered label markers (not black circles)
+                        if (markersByCluster[idx]) {
+                            markersByCluster[idx].forEach(m => m.addTo(map));
+                        }
+                    } else {
+                        visibleClusters.delete(idx);
+                        // Hide footprint
+                        if (clusterFootprintLayers[idx]) {
+                            map.removeLayer(clusterFootprintLayers[idx]);
+                        }
+                        // Hide Voronoi boundary
+                        if (clusterAlphaShapeLayers[idx]) {
+                            map.removeLayer(clusterAlphaShapeLayers[idx]);
+                        }
+                        // Hide center dot
+                        if (clusterCenterDots[idx]) {
+                            map.removeLayer(clusterCenterDots[idx]);
+                        }
+                        // Hide pins/markers
+                        if (markersByCluster[idx]) {
+                            markersByCluster[idx].forEach(m => map.removeLayer(m));
+                        }
+                    }
+                });
+                
+                const color = clusterColors[idx % clusterColors.length];
+                const colorBox = document.createElement('span');
+                colorBox.style.display = 'inline-block';
+                colorBox.style.width = '12px';
+                colorBox.style.height = '12px';
+                colorBox.style.backgroundColor = color;
+                colorBox.style.marginRight = '5px';
+                colorBox.style.verticalAlign = 'middle';
+                
+                label.appendChild(checkbox);
+                label.appendChild(colorBox);
+                label.appendChild(document.createTextNode(`Cluster ${idx} (${cluster.length} images)`));
+                container.appendChild(label);
+            });
+        }
+
+
+        // Select/Deselect all clusters buttons
+        document.getElementById('selectAllClusters').addEventListener('click', () => {
+            clusters.forEach((cluster, idx) => {
+                const checkbox = document.getElementById(`cluster-${idx}`);
+                if (checkbox && !checkbox.checked) {
+                    checkbox.checked = true;
+                    visibleClusters.add(idx);
+                    if (clusterFootprintLayers[idx]) {
+                        clusterFootprintLayers[idx].addTo(map);
+                    }
+                    if (clusterAlphaShapeLayers[idx]) {
+                        clusterAlphaShapeLayers[idx].addTo(map);
+                    }
+                    if (clusterCenterDots[idx]) {
+                        clusterCenterDots[idx].addTo(map);
+                    }
+                    if (markersByCluster[idx]) {
+                        markersByCluster[idx].forEach(m => m.addTo(map));
+                    }
+                }
+            });
+        });
+
+        document.getElementById('deselectAllClusters').addEventListener('click', () => {
+            clusters.forEach((cluster, idx) => {
+                const checkbox = document.getElementById(`cluster-${idx}`);
+                if (checkbox && checkbox.checked) {
+                    checkbox.checked = false;
+                    visibleClusters.delete(idx);
+                    if (clusterFootprintLayers[idx]) {
+                        map.removeLayer(clusterFootprintLayers[idx]);
+                    }
+                    if (clusterAlphaShapeLayers[idx]) {
+                        map.removeLayer(clusterAlphaShapeLayers[idx]);
+                    }
+                    if (clusterCenterDots[idx]) {
+                        map.removeLayer(clusterCenterDots[idx]);
+                    }
+                    if (markersByCluster[idx]) {
+                        markersByCluster[idx].forEach(m => map.removeLayer(m));
+                    }
+                }
+            });
+        });
+
+        // Show/hide all numbered markers
+        document.getElementById('showMarkersCheckbox').addEventListener('change', (e) => {
+            const showMarkers = e.target.checked;
+            
+            // Get all marker label elements (numbered circles)
+            document.querySelectorAll('.cluster-number-label').forEach(label => {
+                if (showMarkers) {
+                    label.style.display = '';
+                } else {
+                    label.style.display = 'none';
+                }
+            });
+        });
+
+        // Alpha hull parameter - auto-redraw when changed
+        document.getElementById('hullConcavity').addEventListener('change', () => {
+            if (clusters.length > 0) {
+                // Remove existing alpha shape layers
+                Object.values(clusterAlphaShapeLayers).forEach(layer => map.removeLayer(layer));
+                clusterAlphaShapeLayers = {};
+                
+                // Redraw with new alpha value
+                createAlphaShapes();
+                
+                console.log(`Redrawn alpha shapes with alpha=${document.getElementById('hullConcavity').value}m`);
+            }
+        });
+
+        // Overlap parameter - recalculate when changed
+        document.getElementById('overlap').addEventListener('change', () => {
+            if (clusters.length > 0) {
+                // Recalculate overlap with new value (works even if boundaries not yet created)
+                if (clusterBoundaries.length > 0) {
+                    calculateClusterOverlap();
+                }
+                
+                // Always refresh markers to show/hide overlap styling
+                markers.forEach(m => map.removeLayer(m));
+                markers = [];
+                displayImagesOnMap();
+                
+                // Update stats
+                updateStats();
+                
+                const overlapVal = document.getElementById('overlap').value;
+                const overlapCount = images.filter(img => img.clusters && img.clusters.length > 1).length;
+                console.log(`Recalculated overlap with ${overlapVal}m: ${overlapCount} images in multiple clusters`);
+                
+                if (overlapCount > 0) {
+                    document.getElementById('status').textContent = `Overlap: ${overlapCount} images in multiple clusters (${overlapVal}m)`;
+                } else {
+                    document.getElementById('status').textContent = `Overlap disabled (0m)`;
+                }
+            }
+        });
+
+        function performClustering() {
+            const algorithm = document.getElementById('algorithm').value;
+            const targetSize = parseInt(document.getElementById('clusterSize').value);
+            
+            if (algorithm === 'kmeans') {
+                performKMeansClustering(targetSize);
+            } else if (algorithm === 'dbscan') {
+                performDBSCANClustering(targetSize);
+            }
+        }
+
+        function performKMeansClustering(targetSize) {
+            // Calculate number of clusters
+            const k = Math.max(1, Math.ceil(images.length / targetSize));
+            
+            console.log(`K-means: Creating ${k} clusters for ${images.length} images (target: ${targetSize} per cluster)`);
+            
+            // Get footprint centers for clustering
+            const points = images.map((img, idx) => {
+                const footprint = calculateGroundFootprint(img);
+                return {
+                    idx: idx,
+                    x: footprint.lat * 111000,
+                    y: footprint.lon * 111000 * Math.cos(img.latitude * Math.PI / 180)
+                };
+            });
+            
+            // Initialize centroids using k-means++
+            const centroids = [];
+            
+            // First centroid: random point
+            centroids.push({...points[Math.floor(Math.random() * points.length)]});
+            
+            // Remaining centroids: choose points far from existing centroids
+            for (let i = 1; i < k; i++) {
+                const distances = points.map(p => {
+                    const minDist = Math.min(...centroids.map(c => 
+                        Math.sqrt(Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2))
+                    ));
+                    return minDist;
+                });
+                
+                // Choose point with highest distance (weighted random)
+                const maxDist = Math.max(...distances);
+                const probabilities = distances.map(d => d / maxDist);
+                const rand = Math.random();
+                let cumProb = 0;
+                let chosenIdx = 0;
+                for (let j = 0; j < probabilities.length; j++) {
+                    cumProb += probabilities[j] / probabilities.reduce((a, b) => a + b, 0);
+                    if (rand <= cumProb) {
+                        chosenIdx = j;
+                        break;
+                    }
+                }
+                centroids.push({...points[chosenIdx]});
+            }
+            
+            // K-means iterations
+            const maxIterations = 100;
+            let assignments = new Array(points.length).fill(-1);
+            
+            for (let iter = 0; iter < maxIterations; iter++) {
+                const newAssignments = new Array(points.length);
+                
+                // Assign each point to nearest centroid
+                points.forEach((p, idx) => {
+                    let minDist = Infinity;
+                    let bestCluster = 0;
+                    
+                    centroids.forEach((c, cidx) => {
+                        const dist = Math.sqrt(
+                            Math.pow(p.x - c.x, 2) +
+                            Math.pow(p.y - c.y, 2)
+                        );
+                        if (dist < minDist) {
+                            minDist = dist;
+                            bestCluster = cidx;
+                        }
+                    });
+                    
+                    newAssignments[idx] = bestCluster;
+                });
+                
+                // Check for convergence
+                if (JSON.stringify(newAssignments) === JSON.stringify(assignments)) {
+                    console.log(`K-means converged after ${iter + 1} iterations`);
+                    break;
+                }
+                
+                assignments = newAssignments;
+                
+                // Update centroids
+                for (let cidx = 0; cidx < k; cidx++) {
+                    const clusterPoints = points.filter((p, idx) => assignments[idx] === cidx);
+                    if (clusterPoints.length > 0) {
+                        centroids[cidx].x = clusterPoints.reduce((sum, p) => sum + p.x, 0) / clusterPoints.length;
+                        centroids[cidx].y = clusterPoints.reduce((sum, p) => sum + p.y, 0) / clusterPoints.length;
+                    }
+                }
+            }
+            
+            // Assign clusters to images
+            images.forEach((img, idx) => {
+                img.cluster = assignments[idx];
+            });
+            
+            // Group into clusters
+            clusters = [];
+            for (let i = 0; i < k; i++) {
+                clusters.push(images.filter(img => img.cluster === i));
+            }
+            
+            // Remove empty clusters
+            clusters = clusters.filter(c => c.length > 0);
+            
+            // Sort clusters geometrically
+            clusters.sort((a, b) => {
+                const centerA = calculateGeographicCenter(a);
+                const centerB = calculateGeographicCenter(b);
+                const lonDiff = centerA.lon - centerB.lon;
+                if (Math.abs(lonDiff) > 0.001) return lonDiff;
+                return centerB.lat - centerA.lat;
+            });
+            
+            // Reassign cluster IDs after sorting
+            clusters.forEach((cluster, idx) => {
+                cluster.forEach(img => img.cluster = idx);
+            });
+            
+            console.log(`K-means complete: ${clusters.length} clusters, sizes:`, clusters.map(c => c.length));
+        }
+
+        function performDBSCANClustering(targetSize) {
+            const eps = parseFloat(document.getElementById('eps').value);
+            const minSamples = parseInt(document.getElementById('minSamples').value);
+
+            // Simple DBSCAN implementation
+            const features = images.map(img => {
+                const footprint = calculateGroundFootprint(img);
+                return {
+                    x: footprint.lat * 111000,
+                    y: footprint.lon * 111000 * Math.cos(img.latitude * Math.PI / 180),
+                    z: img.altitude * 0.5
+                };
+            });
+
+            const visited = new Array(images.length).fill(false);
+            const clusterLabels = new Array(images.length).fill(-1);
+            let clusterIdx = 0;
+
+            for (let i = 0; i < images.length; i++) {
+                if (visited[i]) continue;
+                visited[i] = true;
+
+                const neighbors = getNeighbors(i, features, eps);
+
+                if (neighbors.length < minSamples) {
+                    clusterLabels[i] = -1; // Noise
+                } else {
+                    expandCluster(i, neighbors, clusterIdx, visited, clusterLabels, features, eps, minSamples);
+                    clusterIdx++;
+                }
+            }
+
+            // Assign cluster labels to images
+            images.forEach((img, idx) => {
+                img.cluster = clusterLabels[idx];
+            });
+
+            // Group into clusters
+            clusters = [];
+            for (let i = 0; i < clusterIdx; i++) {
+                clusters.push(images.filter(img => img.cluster === i));
+            }
+
+            // Handle noise points - assign to nearest cluster using footprint centers
+            const noise = images.filter(img => img.cluster === -1);
+            noise.forEach(img => {
+                const imgFootprint = calculateGroundFootprint(img);
+                let minDist = Infinity;
+                let bestCluster = 0;
+                
+                clusters.forEach((cluster, cidx) => {
+                    // Calculate cluster center using footprint centers
+                    let centerLat = 0, centerLon = 0;
+                    cluster.forEach(i => {
+                        const fp = calculateGroundFootprint(i);
+                        centerLat += fp.lat;
+                        centerLon += fp.lon;
+                    });
+                    centerLat /= cluster.length;
+                    centerLon /= cluster.length;
+                    
+                    const dist = Math.sqrt(
+                        Math.pow((imgFootprint.lat - centerLat) * 111000, 2) +
+                        Math.pow((imgFootprint.lon - centerLon) * 111000 * Math.cos(img.latitude * Math.PI / 180), 2)
+                    );
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestCluster = cidx;
+                    }
+                });
+                
+                img.cluster = bestCluster;
+                clusters[bestCluster].push(img);
+            });
+
+            // Split oversized clusters
+            const finalClusters = [];
+            clusters.forEach(cluster => {
+                if (cluster.length <= targetSize * 1.2) {
+                    finalClusters.push(cluster);
+                } else {
+                    const numSplits = Math.ceil(cluster.length / targetSize);
+                    const splitClusters = kMeansSplit(cluster, numSplits);
+                    finalClusters.push(...splitClusters);
+                }
+            });
+
+            clusters = finalClusters;
+            
+            // Rebalance clusters - grow small ones by stealing from neighbors (if enabled)
+            if (document.getElementById('rebalance').checked) {
+                rebalanceClusters(targetSize, eps);
+            } else {
+                console.log('Rebalancing disabled - skipping');
+            }
+            
+            // Sort clusters geometrically for intuitive ordering
+            clusters.sort((a, b) => {
+                // Use GEOGRAPHIC centers for sorting (area-based, not density-based)
+                const centerA = calculateGeographicCenter(a);
+                const centerB = calculateGeographicCenter(b);
+                
+                // Primary sort: west to east (longitude)
+                const lonDiff = centerA.lon - centerB.lon;
+                if (Math.abs(lonDiff) > 0.001) { // ~100m difference
+                    return lonDiff;
+                }
+                
+                // Secondary sort: north to south (latitude, descending)
+                return centerB.lat - centerA.lat;
+            });
+            
+            // Reassign cluster IDs after sorting
+            clusters.forEach((cluster, idx) => {
+                cluster.forEach(img => img.cluster = idx);
+            });
+        }
+
+        function rebalanceClusters(targetSize, eps) {
+            const tolerance = 0.1; // Grow to 110% of current size
+            const minSize = targetSize * 0.7; // Don't steal from clusters below this
+            const maxNeighborDist = eps * 3; // Only consider nearby clusters as neighbors
+            
+            let changed = true;
+            let iterations = 0;
+            const maxIterations = 100;
+            
+            console.log(`Starting rebalance: ${clusters.length} clusters, target size: ${targetSize}`);
+            const initialSizes = clusters.map(c => c.length);
+            console.log(`Initial sizes: min=${Math.min(...initialSizes)}, max=${Math.max(...initialSizes)}, avg=${(initialSizes.reduce((a,b)=>a+b,0)/initialSizes.length).toFixed(1)}`);
+            
+            // Pre-calculate cluster centers (will be updated as we steal)
+            const clusterCenters = clusters.map(c => calculateClusterCenter(c));
+            
+            while (changed && iterations < maxIterations) {
+                changed = false;
+                iterations++;
+                
+                // Find all undersized clusters, process smallest first
+                const undersized = clusters
+                    .map((c, idx) => ({idx, size: c.length}))
+                    .filter(c => c.size < targetSize)
+                    .sort((a, b) => a.size - b.size);
+                
+                if (undersized.length === 0) {
+                    console.log(`All clusters at or above target size`);
+                    break;
+                }
+                
+                for (const {idx: clusterIdx, size: currentSize} of undersized) {
+                    const cluster = clusters[clusterIdx];
+                    const recipientCenter = clusterCenters[clusterIdx];
+                    
+                    // Target is 110% of current size (gradual growth)
+                    const targetCount = Math.floor(currentSize * (1 + tolerance));
+                    const needPoints = targetCount - currentSize;
+                    
+                    if (needPoints <= 0) continue;
+                    
+                    // Find neighboring clusters by distance between centers
+                    const neighbors = clusters
+                        .map((c, idx) => {
+                            if (idx === clusterIdx) return null;
+                            const donorCenter = clusterCenters[idx];
+                            const dist = Math.sqrt(
+                                Math.pow((recipientCenter.lat - donorCenter.lat) * 111000, 2) +
+                                Math.pow((recipientCenter.lon - donorCenter.lon) * 111000 * Math.cos(recipientCenter.lat * Math.PI / 180), 2)
+                            );
+                            return {idx, dist, size: c.length, center: donorCenter};
+                        })
+                        .filter(n => n !== null && n.dist < maxNeighborDist)
+                        .sort((a, b) => a.dist - b.dist);
+                    
+                    if (neighbors.length === 0) {
+                        console.log(`Cluster ${clusterIdx} has no neighbors within ${maxNeighborDist.toFixed(0)}m`);
+                        continue;
+                    }
+                    
+                    // Collect stealable points from neighbors with both distance metrics
+                    const candidates = [];
+                    for (const neighbor of neighbors) {
+                        const neighborCluster = clusters[neighbor.idx];
+                        const donorCenter = neighbor.center;
+                        
+                        // Only steal from clusters that won't become too small
+                        const availableToSteal = neighborCluster.length - minSize;
+                        if (availableToSteal <= 0) continue;
+                        
+                        // Calculate distances for each point in the neighbor cluster
+                        neighborCluster.forEach(img => {
+                            const fp = calculateGroundFootprint(img);
+                            
+                            // Distance to recipient cluster center (want LOW - closer is better)
+                            const distToRecipient = Math.sqrt(
+                                Math.pow((fp.lat - recipientCenter.lat) * 111000, 2) +
+                                Math.pow((fp.lon - recipientCenter.lon) * 111000 * Math.cos(fp.lat * Math.PI / 180), 2)
+                            );
+                            
+                            // Distance from donor cluster center (want HIGH - edge points are better)
+                            const distFromDonor = Math.sqrt(
+                                Math.pow((fp.lat - donorCenter.lat) * 111000, 2) +
+                                Math.pow((fp.lon - donorCenter.lon) * 111000 * Math.cos(fp.lat * Math.PI / 180), 2)
+                            );
+                            
+                            candidates.push({
+                                img: img,
+                                distToRecipient: distToRecipient,
+                                distFromDonor: distFromDonor,
+                                fromCluster: neighbor.idx
+                            });
+                        });
+                    }
+                    
+                    if (candidates.length === 0) continue;
+                    
+                    // Calculate score for each candidate
+                    // We want: low distToRecipient (close to us) + high distFromDonor (edge of their cluster)
+                    // Normalize distances and combine with weights
+                    const maxDistToRecipient = Math.max(...candidates.map(c => c.distToRecipient)) || 1;
+                    const maxDistFromDonor = Math.max(...candidates.map(c => c.distFromDonor)) || 1;
+                    
+                    // Weight: 60% proximity to recipient, 40% edge-ness from donor
+                    // Lower score = better candidate
+                    candidates.forEach(c => {
+                        const proximityScore = c.distToRecipient / maxDistToRecipient;  // 0 = closest to us
+                        const edgeScore = 1 - (c.distFromDonor / maxDistFromDonor);     // 0 = farthest from donor center
+                        c.score = 0.6 * proximityScore + 0.4 * edgeScore;
+                    });
+                    
+                    // Sort by score (lower is better)
+                    candidates.sort((a, b) => a.score - b.score);
+                    
+                    // Steal points, but respect donor minimum sizes
+                    let pointsStolen = 0;
+                    const donorCounts = {};
+                    neighbors.forEach(n => donorCounts[n.idx] = clusters[n.idx].length);
+                    
+                    for (const candidate of candidates) {
+                        if (pointsStolen >= needPoints) break;
+                        
+                        // Check if donor can afford to give this point
+                        if (donorCounts[candidate.fromCluster] > minSize) {
+                            // Remove from donor
+                            clusters[candidate.fromCluster] = clusters[candidate.fromCluster]
+                                .filter(i => i !== candidate.img);
+                            // Add to recipient
+                            clusters[clusterIdx].push(candidate.img);
+                            candidate.img.cluster = clusterIdx;
+                            
+                            donorCounts[candidate.fromCluster]--;
+                            pointsStolen++;
+                            changed = true;
+                        }
+                    }
+                    
+                    // Update cluster centers after stealing
+                    if (pointsStolen > 0) {
+                        clusterCenters[clusterIdx] = calculateClusterCenter(clusters[clusterIdx]);
+                        // Update donor centers too
+                        for (const neighbor of neighbors) {
+                            if (donorCounts[neighbor.idx] !== clusters[neighbor.idx].length) {
+                                clusterCenters[neighbor.idx] = calculateClusterCenter(clusters[neighbor.idx]);
+                            }
+                        }
+                        console.log(`Iteration ${iterations}: Cluster ${clusterIdx} grew from ${currentSize} to ${currentSize + pointsStolen} (+${pointsStolen} images)`);
+                    }
+                }
+            }
+            
+            const finalSizes = clusters.map(c => c.length);
+            console.log(`Rebalancing complete after ${iterations} iterations`);
+            console.log(`Final sizes: min=${Math.min(...finalSizes)}, max=${Math.max(...finalSizes)}, avg=${(finalSizes.reduce((a,b)=>a+b,0)/finalSizes.length).toFixed(1)}`);
+        }
+
+        function calculateClusterCenter(cluster) {
+            // DENSITY CENTER: Average of footprint centers (count-weighted)
+            // Used for rebalancing - represents where images actually are
+            let sumLat = 0, sumLon = 0;
+            cluster.forEach(img => {
+                const fp = calculateGroundFootprint(img);
+                sumLat += fp.lat;
+                sumLon += fp.lon;
+            });
+            return {
+                lat: sumLat / cluster.length,
+                lon: sumLon / cluster.length
+            };
+        }
+
+        function calculateGeographicCenter(cluster) {
+            // GEOGRAPHIC CENTER: Centroid of all footprint corners (area-weighted)
+            // Used for visualization - represents center of coverage area
+            let allCorners = [];
+            cluster.forEach(img => {
+                const trapezoid = calculateFootprintTrapezoid(img);
+                allCorners.push(...trapezoid);
+            });
+            
+            let sumLat = 0, sumLon = 0;
+            allCorners.forEach(([lat, lon]) => {
+                sumLat += lat;
+                sumLon += lon;
+            });
+            
+            return {
+                lat: sumLat / allCorners.length,
+                lon: sumLon / allCorners.length
+            };
+        }
+
+        function getNeighbors(idx, features, eps) {
+            const neighbors = [];
+            const point = features[idx];
+
+            for (let i = 0; i < features.length; i++) {
+                if (i === idx) continue;
+                const dist = Math.sqrt(
+                    Math.pow(point.x - features[i].x, 2) +
+                    Math.pow(point.y - features[i].y, 2) +
+                    Math.pow(point.z - features[i].z, 2)
+                );
+                if (dist <= eps) {
+                    neighbors.push(i);
+                }
+            }
+
+            return neighbors;
+        }
+
+        function expandCluster(idx, neighbors, clusterIdx, visited, clusterLabels, features, eps, minSamples) {
+            clusterLabels[idx] = clusterIdx;
+
+            let i = 0;
+            while (i < neighbors.length) {
+                const neighborIdx = neighbors[i];
+
+                if (!visited[neighborIdx]) {
+                    visited[neighborIdx] = true;
+                    const neighborNeighbors = getNeighbors(neighborIdx, features, eps);
+
+                    if (neighborNeighbors.length >= minSamples) {
+                        neighbors.push(...neighborNeighbors);
+                    }
+                }
+
+                if (clusterLabels[neighborIdx] === -1) {
+                    clusterLabels[neighborIdx] = clusterIdx;
+                }
+
+                i++;
+            }
+        }
+
+        function kMeansSplit(cluster, k) {
+            if (cluster.length <= k) return [cluster];
+
+            // Initialize centroids randomly using footprint centers
+            const centroids = [];
+            const shuffled = [...cluster].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < k; i++) {
+                const fp = calculateGroundFootprint(shuffled[i]);
+                centroids.push({
+                    lat: fp.lat,
+                    lon: fp.lon
+                });
+            }
+
+            // K-means iterations
+            for (let iter = 0; iter < 20; iter++) {
+                const assignments = new Array(k).fill(null).map(() => []);
+
+                // Assign points to nearest centroid using footprint centers
+                cluster.forEach(img => {
+                    const imgFootprint = calculateGroundFootprint(img);
+                    let minDist = Infinity;
+                    let bestCentroid = 0;
+
+                    centroids.forEach((centroid, idx) => {
+                        const dist = Math.sqrt(
+                            Math.pow((imgFootprint.lat - centroid.lat) * 111000, 2) +
+                            Math.pow((imgFootprint.lon - centroid.lon) * 111000 * Math.cos(img.latitude * Math.PI / 180), 2)
+                        );
+                        if (dist < minDist) {
+                            minDist = dist;
+                            bestCentroid = idx;
+                        }
+                    });
+
+                    assignments[bestCentroid].push(img);
+                });
+
+                // Update centroids using footprint centers
+                centroids.forEach((centroid, idx) => {
+                    if (assignments[idx].length > 0) {
+                        let sumLat = 0, sumLon = 0;
+                        assignments[idx].forEach(img => {
+                            const fp = calculateGroundFootprint(img);
+                            sumLat += fp.lat;
+                            sumLon += fp.lon;
+                        });
+                        centroid.lat = sumLat / assignments[idx].length;
+                        centroid.lon = sumLon / assignments[idx].length;
+                    }
+                });
+
+                // Check for convergence (simplified)
+                if (iter > 10) break;
+            }
+
+            // Final assignment using footprint centers
+            const result = new Array(k).fill(null).map(() => []);
+            cluster.forEach(img => {
+                const imgFootprint = calculateGroundFootprint(img);
+                let minDist = Infinity;
+                let bestCentroid = 0;
+
+                centroids.forEach((centroid, idx) => {
+                    const dist = Math.sqrt(
+                        Math.pow((imgFootprint.lat - centroid.lat) * 111000, 2) +
+                        Math.pow((imgFootprint.lon - centroid.lon) * 111000 * Math.cos(img.latitude * Math.PI / 180), 2)
+                    );
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestCentroid = idx;
+                    }
+                });
+
+                result[bestCentroid].push(img);
+            });
+
+            return result.filter(r => r.length > 0);
+        }
+
+        // Export button handler
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            if (clusters.length === 0) {
+                alert('No clusters to export!');
+                return;
+            }
+
+            // Create ODM image_groups.txt format
+            // Format: imagename clustername (space-separated, one line per image-cluster pair)
+            // Images in multiple clusters get multiple lines
+            // Example:
+            // DJI_0001.JPG 0
+            // DJI_0002.JPG 0
+            // DJI_0002.JPG 1   (overlap image)
+            // DJI_0003.JPG 1
+            
+            let txtContent = '';
+            let totalEntries = 0;
+            let overlapImages = 0;
+            
+            images.forEach(img => {
+                if (img.clusters && img.clusters.length > 0) {
+                    // Image belongs to multiple clusters (overlap feature)
+                    img.clusters.forEach(clusterIdx => {
+                        txtContent += `${img.filename} ${clusterIdx}\n`;
+                        totalEntries++;
+                    });
+                    if (img.clusters.length > 1) {
+                        overlapImages++;
+                    }
+                } else if (img.cluster >= 0) {
+                    // Single cluster assignment
+                    txtContent += `${img.filename} ${img.cluster}\n`;
+                    totalEntries++;
+                }
+            });
+            
+            // Create download link for image_groups.txt
+            const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", url);
+            downloadAnchor.setAttribute("download", `image_groups.txt`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            URL.revokeObjectURL(url);
+
+            const clusteredCount = images.filter(i => i.cluster >= 0 || (i.clusters && i.clusters.length > 0)).length;
+            let statusMsg = `Exported image_groups.txt (${totalEntries} entries, ${clusteredCount} images in ${clusters.length} clusters)`;
+            if (overlapImages > 0) {
+                statusMsg += ` - ${overlapImages} overlap images`;
+            }
+            document.getElementById('status').textContent = statusMsg;
+        });
+    </script>
+</body>
+</html>
